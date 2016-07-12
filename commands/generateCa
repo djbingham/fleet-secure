@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+
+CA_CSR="${DIR_CERTIFICATES}/ca/csr.json"
+
+echo "Generating certificate signing request for Certificate Authority"
+$(dirname ${BASH_SOURCE[0]})/generateCsr ca 127.0.0.1
+
+echo "Generating Certificate Authority"
+cd /home/certificates/ca
+cfssl gencert -config ${CONFIG_CA} -initca ${CA_CSR} | cfssljson -bare ca -

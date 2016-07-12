@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+
+echo "Auto-renew all existing SSL certificates before they expire"

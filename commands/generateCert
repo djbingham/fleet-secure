@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+
+hostName="$1"
+publicIP="$2"
+
+CA_PUBLIC_KEY="${DIR_CERTIFICATES}/ca/ca.pem"
+CA_PRIVATE_KEY="${DIR_CERTIFICATES}/ca/ca-key.pem"
+
+targetDirectory="${DIR_CERTIFICATES}/${hostName}"
+csr="${targetDirectory}/csr.json"
+publicKey="${targetDirectory}/${hostName}.pem"
+privateKey="${targetDirectory}/${hostName}-key.pem"
+
+mkdir -p ${targetDirectory}
+
+echo "Generating a new SSL certificate for host name ${hostName}, using the following CSR: "
+cat ${csr}
+cd ${targetDirectory}
+cfssl gencert -ca=${CA_PUBLIC_KEY} -ca-key=${CA_PRIVATE_KEY} -config=${CONFIG_CA} -profile=client-server ${csr} | cfssljson -bare ${hostName}
+
+echo "Copying generated files to ${publicIP}"
+chmod 0644 ${privateKey}
+scp ${CA_PUBLIC_KEY} ${publicKey} ${privateKey} core@${publicIP}:

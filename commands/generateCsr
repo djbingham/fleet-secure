@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+
+hostName="$1"
+privateIP="$2"
+
+targetDirectory="${DIR_CERTIFICATES}/${hostName}"
+csr="${targetDirectory}/csr.json"
+
+mkdir -p ${targetDirectory}
+
+cp ${CONFIG_CSR_TEMPLATE} ${csr}
+sed -i s/\{\{hostName\}\}/${hostName}/g ${csr}
+sed -i s/\{\{privateIP\}\}/${privateIP}/g ${csr}
