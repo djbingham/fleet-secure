@@ -1,3 +1,40 @@
 #!/usr/bin/env bash
 
-echo "Auto-renew all existing SSL certificates before they expire"
+RENEWAL_THRESHOLD=$(expr 7 \* 24 \* 60 \* 60 \* 300)
+currentTime=$(date +%s)
+
+echo "Checking all certificates for upcoming expiry."
+
+for folder in ${DIR_CERTIFICATES}/*; do
+	if ! [[ "${folder}" == "ca" ]]; then
+		echo "Inspecting certificate in folder '${folder}'"
+
+		certificateName=${folder##*/}
+		request="${folder}/request.md"
+		certificate="${folder}/${certificateName}.pem"
+
+		echo "Certificate file: ${certificate}"
+		echo "Certificate signing request: "
+		cat ${folder}/csr.json
+
+		expiryDate=$(date -d "$(openssl x509 -in ${certificate} | openssl x509 -noout -dates | grep notAfter | sed s/.*=//g)")
+		expiryTime=$(date -d "${expiryDate}" +%s)
+
+		renewalTime=$(expr ${expiryTime} - ${RENEWAL_THRESHOLD})
+		renewalDate=$(date -d "@${renewalTime}")
+
+		echo "Certificate expires: ${expiryDate} (timestamp: ${expiryTime})."
+	 	echo "Renewal due:         ${renewalDate} (timestamp: ${renewalTime})."
+		echo "Current time:        $(date) (timestamp: ${currentTime})."
+
+		if [[ ${currentTime} -ge ${renewalTime} ]]; then
+			publicIP=$(cat ${request})
+
+			generateCert ${certificateName} ${publicIP}
+		fi
+	fi
+done
+
+echo "Waiting for next expiry checkpoint."
+sleep 10
+. ${BASH_SOURCE[0]}
