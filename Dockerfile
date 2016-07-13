@@ -5,13 +5,13 @@ ADD . /home
 
 VOLUME /home/certificates
 
-ENV CONFIG_CA="/home/config/ca-config.json"
-ENV CONFIG_CSR_TEMPLATE="/home/config/csr-template.json"
+ENV FILE_CA_CONFIG="/home/config/ca-config.json"
+ENV FILE_CSR_TEMPLATE="/home/config/csr-template.json"
 ENV DIR_CERTIFICATES="/home/certificates"
 
 RUN echo 'export PATH="$PATH:/home/commands"' >> ~/.bashrc
 
 WORKDIR /home
 
-ENTRYPOINT ./entrypoint.sh
+ENTRYPOINT ["/home/entrypoint.sh"]
 CMD auto
