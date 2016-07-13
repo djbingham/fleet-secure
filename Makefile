@@ -1,4 +1,5 @@
 tag ?= djbingham/fleet-ca
+container ?= fleet-ca
 host ?=
 privateIP ?=
 publicIP ?=
@@ -13,22 +14,30 @@ push:
 pull:
 	docker pull $(tag)
 
-start:
-	docker run \
-		-d
-		--name "fleet-ca" \
-		--volume "fleet-ca-certificates:/home/certificates" \
-		$(tag)
-
 generate:
 	docker run \
 		--rm \
 		--volume "fleet-ca-certificates:/home/certificates" \
 		$(tag) generateCsr $(host) $(privateIP)
+
 	docker run \
 		--rm \
 		--volume "fleet-ca-certificates:/home/certificates" \
 		$(tag) generateCert $(host) $(publicIP)
+
+run:
+	docker run \
+		-d \
+		--name "$(container)" \
+		--volume "fleet-ca-certificates:/home/certificates" \
+		$(tag)
+
+logs:
+	docker logs -f $(container)
+
+destroy:
+	docker stop $(container)
+	docker rm -vf $(container)
 
 bash:
 	docker run \
@@ -37,6 +46,3 @@ bash:
 		--volume "fleet-ca-certificates:/home/certificates" \
 		--entrypoint bash \
 		$(tag) $(cmd)
-
-exec:
-	docker exec fleet-ca" $(cmd)
