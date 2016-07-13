@@ -8,7 +8,7 @@ if [[ "${command}" == "" ]]; then
 	command="auto"
 fi
 
-declare -a allowedCommands=(auto generateCa generateCsr generateCert renew)
+declare -a allowedCommands=(auto generateCa generateCsr generateCert deploy)
 
 if ! [[ ${allowedCommands[@]} =~ "${command}" ]]; then
 	echo "Command should be one of the following: ${allowedCommands[@]}"
@@ -17,4 +17,4 @@ fi
 
 path="$( dirname ${BASH_SOURCE[0]} )/commands/${command}"
 
-echo "${path} $@"
+${path} $@

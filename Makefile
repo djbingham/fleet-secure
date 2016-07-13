@@ -18,12 +18,18 @@ generate:
 	docker run \
 		--rm \
 		--volume "fleet-ca-certificates:/home/certificates" \
-		$(tag) generateCsr $(host) $(privateIP)
+		$(tag) generateCsr $(host) $(privateIP) $(publicIP)
 
 	docker run \
 		--rm \
 		--volume "fleet-ca-certificates:/home/certificates" \
-		$(tag) generateCert $(host) $(publicIP)
+		$(tag) generateCert $(host)
+
+deploy:
+	docker run \
+		--rm \
+		--volume "fleet-ca-certificates:/home/certificates" \
+		$(tag) deploy $(host)
 
 run:
 	docker run \

@@ -3,7 +3,7 @@
 hostName="$1"
 
 if [[ "${hostName}" == "" ]]; then
-	echo "Host required to generate a certificate."
+	echo "Host required to deploy a certificate."
 	exit
 fi
 
@@ -12,13 +12,18 @@ FILE_CA_KEY="${DIR_CERTIFICATES}/ca/ca-key.pem"
 
 targetDirectory="${DIR_CERTIFICATES}/${hostName}"
 request="${targetDirectory}/request.md"
-csr="${targetDirectory}/csr.json"
 certificate="${targetDirectory}/${hostName}.pem"
 privateKey="${targetDirectory}/${hostName}-key.pem"
 
-echo "Generating certificate..."
+publicIP=$(cat ${request} | grep 'publicIP' | awk '{print $2}')
+destination="core@${publicIP}:"
 
-cd ${targetDirectory}
-cfssl gencert -ca=${FILE_CA_CERTIFICATE} -ca-key=${FILE_CA_KEY} -config=${FILE_CA_CONFIG} ${csr} | cfssljson -bare ${hostName}
-echo "Generated SSL certificate for host name ${hostName}, using the following CSR: "
-cat ${csr}
+echo "Deploying certificate..."
+
+chmod 0644 ${privateKey}
+scp ${FILE_CA_CERTIFICATE} ${certificate} ${privateKey} ${destination}
+echo "
+Certificate files deployed to ${destination}.
+	${certificate}
+	${privateKey}
+"
