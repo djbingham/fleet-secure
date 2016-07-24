@@ -1,8 +1,12 @@
 tag ?= djbingham/fleet-ca
 container ?= fleet-ca
+volume-certs ?= fleet-ca-certificates
+
 host ?=
-privateIP ?=
-publicIP ?=
+ip-private ?=
+ip-public ?=
+
+entrypoint ?= bash
 cmd ?=
 
 build:
@@ -14,41 +18,37 @@ push:
 pull:
 	docker pull $(tag)
 
-generate:
-	docker run \
-		--rm \
-		--volume "fleet-ca-certificates:/home/certificates" \
-		$(tag) generateCsr $(host) $(privateIP) $(publicIP)
-
-	docker run \
-		--rm \
-		--volume "fleet-ca-certificates:/home/certificates" \
-		$(tag) generateCert $(host)
-
-deploy:
-	docker run \
-		--rm \
-		--volume "fleet-ca-certificates:/home/certificates" \
-		$(tag) deploy $(host)
-
 run:
 	docker run \
 		-d \
 		--name "$(container)" \
-		--volume "fleet-ca-certificates:/home/certificates" \
-		$(tag)
+		--volume "$(volume-certs):/app/certificates" \
+		$(tag) auto
+
+add-certificate:
+	docker run \
+		--rm \
+		--volume "$(volume-certs):/app/certificates" \
+		$(tag) add-certificate $(host) $(ip-private) $(ip-public)
 
 logs:
 	docker logs -f $(container)
 
-destroy:
-	docker stop $(container)
-	docker rm -vf $(container)
-
-bash:
+execute:
 	docker run \
 		--rm \
 		-it \
-		--volume "fleet-ca-certificates:/home/certificates" \
-		--entrypoint bash \
+		--volume "$(volume-certs):/app/certificates" \
+		--entrypoint $(entrypoint) \
 		$(tag) $(cmd)
+
+run-command:
+	docker run \
+		--rm \
+		--volume "$(volume-certs):/app/certificates" \
+		$(tag) $(cmd)
+
+destroy:
+	docker stop $(container) || true
+	docker rm -vf $(container) || true
+	docker volume rm $(volume-certs) || true

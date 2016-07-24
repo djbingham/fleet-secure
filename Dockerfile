@@ -1,17 +1,18 @@
 FROM cfssl/cfssl
 MAINTAINER David Bingham <dev@davidjbingham.co.uk>
 
-ADD . /home
+RUN echo 'export PATH="$PATH:/app/commands"' >> ~/.bashrc
 
-VOLUME /home/certificates
+COPY scripts /app/scripts
+COPY config /app/config
 
-ENV FILE_CA_CONFIG="/home/config/ca-config.json"
-ENV FILE_CSR_TEMPLATE="/home/config/csr-template.json"
-ENV DIR_CERTIFICATES="/home/certificates"
+VOLUME /app/certificates
 
-RUN echo 'export PATH="$PATH:/home/commands"' >> ~/.bashrc
+WORKDIR /app
 
-WORKDIR /home
+ENV FILE_CA_CONFIG="/app/config/ca-config.json"
+ENV FILE_CSR_TEMPLATE="/app/config/csr-template.json"
+ENV DIR_CERTIFICATES="/app/certificates"
 
-ENTRYPOINT ["/home/entrypoint.sh"]
-CMD auto
+ENTRYPOINT ["/app/scripts/main.sh"]
+CMD ["auto"]

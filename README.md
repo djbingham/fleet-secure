@@ -1,4 +1,5 @@
-# Certificate Authority for Secure Fleet Usage
+# Fleet CA
+This project provides all that is required to run a Certificate Authority as a Docker container within a CoreOS fleet. The container may also be useful in other environments, but has not been tested as such.
 
 ###### Build, push and pull the container image
 ```
