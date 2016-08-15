@@ -1,6 +1,6 @@
-tag ?= djbingham/fleet-ca
-container ?= fleet-ca
-volume-certs ?= fleet-ca-certificates
+tag ?= djbingham/fleet-certificate-authority
+container ?= fleet-certificate-authority
+volume-certs ?= fleet-certificates
 
 host ?=
 ip-private ?=
