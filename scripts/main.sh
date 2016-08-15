@@ -17,7 +17,7 @@ fi
 
 if [ ${command} == "auto" ]; then
 	initialiseCA
-	autoRenewCertificates
+	automate 10 renewAllCertificates
 elif [ ${command} == "add-certificate" ]; then
 	createCSR $@
 	generateCertificate $@

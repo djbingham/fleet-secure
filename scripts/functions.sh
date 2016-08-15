@@ -116,14 +116,28 @@ deployCertificate() {
 	"
 }
 
-autoRenewCertificates() {
-	FREQUENCY=10
-	RENEWAL_THRESHOLD=$(expr 7 \* 24 \* 60 \* 60 \* 300)
+automate() {
+	FREQUENCY=$0
+	shift
+	FUNCTION=$0
+	shift
 
-	currentTime=$(date +%s)
+	echo "Automated execution of ${FUNCTION} with arguments $@."
 
-	echo ""
-	echo "Checking all certificates for upcoming expiry."
+	${FUNCTION} $@
+
+	echo "Waiting ${FREQUENCY} seconds for next iteration of ${FUNCTION}."
+	sleep ${FREQUENCY}
+}
+
+renewAllCertificates() {
+	CURRENT_TIME=$(date +%s)
+	RENEWAL_THRESHOLD=$(expr ${CURRENT_TIME} + $(expr 7 \* 24 \* 60 \* 60 \* 300))
+
+	# @todo Remove the following line. This is for testing only
+	RENEWAL_THRESHOLD=$(expr ${CURRENT_TIME} + 15)
+
+	echo "Checking all certificates for expiry before ${RENEWAL_THRESHOLD}."
 
 	for folder in ${DIR_CERTIFICATES}/*; do
 		if [ -d ${folder} ] && [ "${folder}" != "${DIR_CERTIFICATES}/ca" ]; then
@@ -141,26 +155,32 @@ autoRenewCertificates() {
 			expiryDate=$(date -d "$(openssl x509 -in ${certificate} | openssl x509 -noout -dates | grep notAfter | sed s/.*=//g)")
 			expiryTime=$(date -d "${expiryDate}" +%s)
 
-			renewalTime=$(expr ${expiryTime} - ${RENEWAL_THRESHOLD})
-			renewalDate=$(date -d "@${renewalTime}")
-
 			echo "Certificate expires: ${expiryDate} (timestamp: ${expiryTime})."
-			echo "Renewal due:         ${renewalDate} (timestamp: ${renewalTime})."
-			echo "Current time:        $(date) (timestamp: ${currentTime})."
 
-			if [[ ${currentTime} -ge ${renewalTime} ]]; then
+			if [[ ${expiryTime} -le ${RENEWAL_THRESHOLD} ]]; then
+				echo "Certificate requires renewal."
+
 				publicIP=$(cat ${request} | grep 'publicIP' | awk '{print $2}')
 
 				echo "Generating certificate '${certificateName}' and sending to public IP '${publicIP}'."
-
 				generateCertificate ${certificateName}
 				deployCertificate ${certificateName} ${publicIP}
+			else
+				echo "Certificate does not require renewal at this time."
 			fi
 		fi
 	done
 
 	echo ""
-	echo "All certificates checked. Waiting ${FREQUENCY} seconds for next check."
-	sleep ${FREQUENCY}
-	autoRenewCertificates
+	echo "All certificates are now up to date."
+}
+
+generateFleetCertificates() {
+	machines=$(fleetctl list-machines -fields=ip -no-legend)
+
+	for ip in machines; do
+		echo "Searching for existing CSR for machine ${ip}."
+
+		# If CSR not found, generate one using `create CSR $host $privateIP $publicIP`
+	done;
 }
