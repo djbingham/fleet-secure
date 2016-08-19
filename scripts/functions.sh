@@ -3,17 +3,21 @@ initialiseCA() {
 	DIR_CA="${DIR_CERTIFICATES}/ca"
 	FILE_CA_CSR="${DIR_CA}/csr.json"
 
+	echo ""
 	echo "Generating Certificate Authority..."
+	echo ""
 
 	mkdir -p ${DIR_CA}
 	cd ${DIR_CA}
-	echo "Certificate Authority directory created."
+	echo "Certificate Authority directory created. Generating CSR."
 
 	createCSR ca
-	echo "Certiciate Authority CSR generated."
+	echo "Certificate Authority CSR generated. Generating Certificate."
 
 	cfssl gencert -config ${FILE_CA_CONFIG} -initca ${FILE_CA_CSR} | cfssljson -bare ca -
+	echo ""
 	echo "Certificate Authority generated."
+	echo ""
 }
 
 createCSR() {
@@ -117,17 +121,22 @@ deployCertificate() {
 }
 
 automate() {
-	FREQUENCY=$0
+	FREQUENCY=$1
 	shift
-	FUNCTION=$0
+	FUNCTION=$1
 	shift
 
-	echo "Automated execution of ${FUNCTION} with arguments $@."
+	echo ""
+	echo ">>>> Automated execution of ${FUNCTION} with arguments $@."
+	echo ""
 
 	${FUNCTION} $@
 
-	echo "Waiting ${FREQUENCY} seconds for next iteration of ${FUNCTION}."
+	echo ""
+	echo "<<<< Waiting ${FREQUENCY} seconds for next iteration of ${FUNCTION}."
+	echo ""
 	sleep ${FREQUENCY}
+	automate ${FREQUENCY} ${FUNCTION} $@
 }
 
 renewAllCertificates() {
