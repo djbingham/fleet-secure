@@ -4,22 +4,25 @@
 command="$1"
 shift
 
-if [ ${command} == "" ]; then
+if [[ ${command} == "" ]]; then
 	command="auto"
 fi
 
-declare -a allowedCommands=(auto add-certificate)
+echo "Running command '${command}'"
+case ${command} in
+	auto)
+		initialiseCA
+		automate 10 renewAllCertificates
+		;;
 
-if ! [[ ${allowedCommands[@]} =~ "${command}" ]]; then
-	echo "ERROR: Command should be one of the following: ${allowedCommands[@]}."
-	exit 1
-fi
+	add-certificate)
+		createCSR $@
+		generateCertificate $@
+		deployCertificate $@
+		;;
 
-if [ ${command} == "auto" ]; then
-	initialiseCA
-	automate 10 renewAllCertificates
-elif [ ${command} == "add-certificate" ]; then
-	createCSR $@
-	generateCertificate $@
-	deployCertificate $@
-fi
+	*)
+		declare -a allowedCommands=(auto add-certificate)
+		echo "Command not recognised. Allowed commands are: ${allowedCommands[@]}"
+		;;
+esac
