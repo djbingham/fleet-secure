@@ -1,39 +1,61 @@
 # Fleet CA
-This project provides all that is required to run a Certificate Authority as a Docker container within a CoreOS fleet. The container may also be useful in other environments, but has not been tested as such.
+This is a work in progress aiming to provide a containerised certificate authority that automatically generates and renews certificates for a CoreOS fleet. Commands should be executed via `task.sh`. The reason for using a plain bash script as opposed to, for example, a Makefile is that CoreOS does not come with Make installed and does not allow such tools to be easily installed outside of a container.
+
+To see what commands are available, clone this repository and run `. task.sh help`.
+
+## Common Tasks
+
+### Container Management
 
 ###### Build, push and pull the container image
 ```
-make build [tag=...]
-make push [tag=...]
-make pull [tag=...]
-```
-
-###### Generate a new certificate
-```
-make generate host=... privateIP=... publicIP=... [tag=...] [container=...]
-```
-
-e.g.
-```
-make generate host=core1 privateIP=127.0.0.1 publicIP=192.168.100.101
+. task.sh build [tag=...]
+. task.sh push [tag=...]
+. task.sh pull [tag=...]
 ```
 
 ###### Start perpetual container for auto-renewal of certificates
 ```
-make run [tag=...] [container=...]
+. task.sh run [tag=...] [container=...] [certificateVolume=...]
 ```
 
-###### Tail logs of the auto-renewal container
+When working on this project it is useful to run the container with host-mounted scripts and configuration files, so that changes are reflected immediately without needing to rebuild the container:
+
 ```
-make logs
+. task.sh test [tag=...] [container=...] [certificateVolume=...]
 ```
 
-###### Stop and destroy auto-renewal container, including volumes
+###### Stop and destroy the auto-renewal container, including volumes
 ```
-make run [container=...]
+. task.sh stop [contianer=...]
+. task.sh destroy [container=...]
 ```
 
-###### Run a command within a container with the same volumes and image as the auto-renewal container
+### Using the running container
+
+###### Generate a new certificate
 ```
-make bash [tag=...] [cmd=...]
+. task.sh add-certificate host=... privateIP=... publicIP=... [tag=...] [container=...]
+```
+
+e.g.
+```
+. task.sh add-certificate host=core1 privateIP=127.0.0.1 publicIP=192.168.100.101
+```
+
+###### Tail the logs
+```
+. task.sh logs
+```
+
+###### Execute a command within the running container
+```
+. task.sh exec [tag=...] [command=...]
+```
+
+### Working with the certificate volume
+
+###### Execute a command within a separate container that shares volumes and image with the running container
+```
+. task.sh execute [tag=...] [entrypoint=...] [command=...]
 ```
