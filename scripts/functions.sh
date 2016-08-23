@@ -190,6 +190,7 @@ generateFleetCertificates() {
 	for ip in machines; do
 		echo "Searching for existing CSR for machine ${ip}."
 
-		# If CSR not found, generate one using `create CSR $host $privateIP $publicIP`
+		# @todo: If CSR not found, generate one using `create CSR $host $privateIP $publicIP`
+
 	done;
 }
