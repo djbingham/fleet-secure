@@ -39,7 +39,6 @@ case ${command} in
 	##>> Print this help documentation.
 	help)
 		file="$( cd -P "$( dirname "${BASH_SOURCE[0]}" )" && pwd )/`basename ${BASH_SOURCE[0]}`"
-		echo "FILE: ${file}"
 		docs=''
 		grep '^[[:space:]]*##' "$file" | while read -r line; do
 			indentLevel=$(echo ${line} | sed 's/##\(>*\)/\1/g' | awk '{ print length }')

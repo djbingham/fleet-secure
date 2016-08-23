@@ -1,4 +1,22 @@
 #!/usr/bin/env bash
+getOptions()
+{
+	echo 'Reading options:'
+	while [ $# -gt 0 ]; do
+		if [[ $1 == *'='* ]]; then
+			option=${1%%=*}     # Extract name.
+			value=${1##*=}         # Extract value.
+			echo "${options}"$'\t'"${option} = ${value}"
+			eval ${option}=${value}
+		elif [[ ${task} == '' ]]; then
+			task="$1"
+		else
+			arguments="$arguments $1"
+		fi
+		shift
+	done
+}
+
 initialiseCA() {
 	DIR_CA="${DIR_CERTIFICATES}/ca"
 	FILE_CA_CSR="${DIR_CA}/csr.json"

@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-
 ##
 ## Usage: _PROG_
 ##
@@ -14,6 +13,8 @@
 ##> container
 ##> certificateVolume
 ##
+
+. $(dirname ${BASH_SOURCE[0]})/scripts/functions.sh
 
 # Task to execute from this script
 task=''
@@ -32,62 +33,8 @@ publicIP=''
 command='/app/scripts/main.sh'
 arguments=''
 
-
-while [[ $# -gt 0 ]]
-do
-	key="$1"
-
-	case ${key} in
-		--tag)
-			tag="$2"
-			shift # past argument name
-			;;
-
-		--container)
-			container="$2"
-			shift # past argument name
-			;;
-
-		--certificateVolume)
-			certificateVolume="$2"
-			shift # past argument name
-			;;
-
-		--host)
-			host="$2"
-			shift # past argument name
-			;;
-
-		--privateIP)
-			privateIP="$2"
-			shift # past argument name
-			;;
-
-		--publicIP)
-			publicIP="$2"
-			shift # past argument name
-			;;
-
-		--command,cmd)
-			command="$2"
-			shift # past argument name
-			;;
-
-		--arguments)
-			arguments="$2"
-			shift # past argument name
-			;;
-
-		*)
-			if [[ ${task} == '' ]]; then
-				task="${key}"
-			else
-				arguments="${arguments} ${key}"
-			fi
-			;;
-	esac
-	shift # past argument value (or name, if argument has no value in above case list)
-done
+# Override defaults from above with any options passed via command line
+getOptions $*
 
 echo ""
 echo "Executing task '${task}'."
@@ -170,10 +117,14 @@ case ${task} in
 	##>>> privateIP: The private IP address of the fleet node this certificate will be deployed to.
 	##>>> publicIP: The public IP address of the fleet node this certificate will be deployed to.
 	add-certificate)
-		docker run \
-			--rm \
-			--volume "${certificateVolume}:/app/certificates" \
-			${tag} add-certificate ${host} ${privateIP} ${publicIP}
+		if [[ ${host} == "" || ${privateIP} == "" || ${publicIP} == "" ]]; then
+			echo 'Missing required option. Required: host, privateIP, publicIP'
+		else
+			docker run \
+				--rm \
+				--volume "${certificateVolume}:/app/certificates" \
+				${tag} add-certificate ${host} ${privateIP} ${publicIP}
+		fi
 		;;
 
 	##
