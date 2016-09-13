@@ -126,7 +126,7 @@ deployCertificate() {
 		fi
 	fi
 
-	destination="core@${publicIP}:"
+	destination="core@${publicIP}:/home/core/certificates"
 
 	echo "Deploying certificate..."
 
