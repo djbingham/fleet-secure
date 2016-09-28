@@ -33,7 +33,7 @@ if File.exist?('cloud-config.yml') && ARGV[0].eql?('up')
   end
 
   yaml = YAML.dump(data)
-  File.open('cloud-config.yml', 'w') { |file| file.write("#cloud-config\n\n#{yaml}") }
+  File.open('cloud-config-generated.yml', 'w') { |file| file.write("#cloud-config\n\n#{yaml}") }
 end
 
 # Change basename of the VM
@@ -54,7 +54,7 @@ $instance_ip_prefix="192.168.100."
 $image_version = "current"
 
 # Official CoreOS channel from which updates should be downloaded
-$update_channel='stable'
+$update_channel='alpha'
 
 # Log the serial consoles of CoreOS VMs to log/
 # Enable by setting value to true, disable with false

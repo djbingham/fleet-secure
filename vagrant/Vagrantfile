@@ -4,7 +4,7 @@
 #
 # ------------------------------------------------- * -------------------------------------------------
 # This is based on the official CoreOS Vagrantfile (https://github.com/coreos/coreos-vagrant),
-# downloaded on 25th February 2016. Docker-Compose is installed to /opt/bin for easy container linking.
+# downloaded on 25th February 2016.
 # ------------------------------------------------- * -------------------------------------------------
 #
 
@@ -12,7 +12,7 @@ require 'fileutils'
 
 Vagrant.require_version ">= 1.6.0"
 
-CLOUD_CONFIG_PATH = File.join(File.dirname(__FILE__), "cloud-config.yml")
+CLOUD_CONFIG_PATH = File.join(File.dirname(__FILE__), "cloud-config-generated.yml")
 CONFIG = File.join(File.dirname(__FILE__), "config.rb")
 
 # Defaults for config options defined in CONFIG
@@ -154,12 +154,9 @@ Vagrant.configure("2") do |config|
 			config.vm.provision :shell, :inline => "git config --global user.email '#{$git_email}'", :privileged => false
 			config.vm.provision :shell, :inline => "git config --global user.name '#{$git_name}'", :privileged => false
 
-			# Setup environment
-			config.vm.provision :shell, :inline => "cd /home/core/share && . vagrant/install/bashrc.sh"
-			config.vm.provision :shell, :inline => "cd /home/core/share && . vagrant/install/docker-bash-completion.sh"
-			config.vm.provision :shell, :inline => "cd /home/core/share && . vagrant/install/ssh-key.sh"
-
-			# Set default directory for vagrant ssh
+			# Add environment variable and default directory to .bashrc
+			config.vm.provision :shell, :inline => "cp --remove-destination /usr/share/skel/.bashrc /home/core/.bashrc"
+			config.vm.provision :shell, :inline => "echo 'export ENVIRONMENT=\"development\"' >> .bashrc"
 			config.vm.provision :shell, :inline => "echo 'cd /home/core/share' >> .bashrc"
 		end
 	end

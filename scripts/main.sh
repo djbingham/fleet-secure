@@ -10,12 +10,16 @@ fi
 
 echo "Running command '${command}'"
 case ${command} in
+	generate-ca)
+		generateCA
+		;;
+
 	##
 	##> auto
 	##>> Continually monitor and automatically renew all certificates generated using `add-certificate`.
 	##>> This includes certificates added after the `auto` command was started.
 	auto)
-		initialiseCA
+		# @todo: Massively reduce the frequency of renewal checks (to something like once per week or month)
 		automate 10 renewAllCertificates
 		;;
 
@@ -29,9 +33,8 @@ case ${command} in
 	##>>> publicIP
 	##>>> privateIP
 	add-certificate)
-		createCSR $@
+		generateCSR $@
 		generateCertificate $@
-		deployCertificate $@
 		;;
 
 	##

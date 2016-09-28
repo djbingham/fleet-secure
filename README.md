@@ -1,7 +1,17 @@
 # Fleet CA
 This is a work in progress aiming to provide a containerised certificate authority that automatically generates and renews certificates for a CoreOS fleet. Commands should be executed via `task.sh`. The reason for using a plain bash script as opposed to, for example, a Makefile is that CoreOS does not come with Make installed and does not allow such tools to be easily installed outside of a container.
 
-To see what commands are available, clone this repository and run `. task.sh help`.
+To see what commands are available, clone this repository and run `./task.sh help`.
+
+## Testing in development
+To test any changes to this project, simply set the environment variable `ENVIRONMENT=development`, before running any tasks as normal. For extra convenience, an additional script is included that will take care of this for you:
+```
+./test.sh [task] [options]
+```
+Executing the above is completely equivalent to:
+```
+ENVIRONMENT=development ./task.sh [task] [options]
+```
 
 ## Common Tasks
 
@@ -33,14 +43,24 @@ When working on this project it is useful to run the container with host-mounted
 
 ### Using the running container
 
-###### Generate a new certificate
+###### Generate a new certificate authority
 ```
-. task.sh add-certificate host=... privateIP=... publicIP=... [tag=...] [container=...]
+. task.sh generate-ca [tag=...] [container=...]
 ```
 
 e.g.
 ```
-. task.sh add-certificate host=core1 privateIP=127.0.0.1 publicIP=192.168.100.101
+. task.sh generate-ca
+```
+
+###### Generate a new certificate
+```
+. task.sh generate-certificate commonName=... hosts=... [tag=...] [container=...]
+```
+
+The `hosts` value should be a comma-separated list of host names and IP addresses for which the certificate will be valid. e.g.
+```
+. task.sh generate-certificate commonName=fleet hosts="192.168.100.101, 192.168.100.102, 192.168.100.103"
 ```
 
 ###### Tail the logs
@@ -59,3 +79,7 @@ e.g.
 ```
 . task.sh execute [tag=...] [entrypoint=...] [command=...]
 ```
+
+## Testing security certificates
+curl --key /home/core/certificates/fleet/coreos-key.pem --cert /home/core/certificates/fleet/coreos.pem --cacert /home/core/certificates/fleet/ca.pem -L https://127.0.0.1:2379/v2/keys/foo -XPUT -d value=bar -v
+

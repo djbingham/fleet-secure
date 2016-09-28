@@ -3,10 +3,10 @@ MAINTAINER David Bingham <dev@davidjbingham.co.uk>
 
 RUN echo 'export PATH="$PATH:/app/commands"' >> ~/.bashrc
 
+VOLUME /app/certificates
+
 COPY scripts /app/scripts
 COPY config /app/config
-
-VOLUME /app/certificates
 
 WORKDIR /app
 

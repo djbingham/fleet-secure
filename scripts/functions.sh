@@ -17,9 +17,11 @@ getOptions()
 	done
 }
 
-initialiseCA() {
+generateCA() {
 	DIR_CA="${DIR_CERTIFICATES}/ca"
 	FILE_CA_CSR="${DIR_CA}/csr.json"
+	FILE_CA_KEY="${DIR_CERTIFICATES}/ca/ca-key.pem"
+	FILE_CA_CERTIFICATE="${DIR_CERTIFICATES}/ca/ca.pem"
 
 	echo ""
 	echo "Generating Certificate Authority..."
@@ -29,26 +31,26 @@ initialiseCA() {
 	cd ${DIR_CA}
 	echo "Certificate Authority directory created. Generating CSR."
 
-	createCSR ca
+	generateCSR ca
 	echo "Certificate Authority CSR generated. Generating Certificate."
 
 	cfssl gencert -config ${FILE_CA_CONFIG} -initca ${FILE_CA_CSR} | cfssljson -bare ca -
+	chmod 644 ${FILE_CA_KEY} ${FILE_CA_CERTIFICATE}
 	echo ""
 	echo "Certificate Authority generated."
 	echo ""
 }
 
-createCSR() {
-	hostName="$1"
-	privateIP="$2"
-	publicIP="$3"
+generateCSR() {
+	commonName="$1"
+	hosts="$2"
 
-	if [ "${hostName}" == "" ]; then
-		echo "ERROR: Host required to generate a certificate signing request."
+	if [ "${commonName}" == "" ]; then
+		echo "ERROR: A common name is required to generate a certificate signing request."
 		exit
 	fi
 
-	targetDirectory="${DIR_CERTIFICATES}/${hostName}"
+	targetDirectory="${DIR_CERTIFICATES}/${commonName}"
 	request="${targetDirectory}/request.md"
 	csr="${targetDirectory}/csr.json"
 
@@ -57,24 +59,31 @@ createCSR() {
 	mkdir -p ${targetDirectory}
 
 	echo "
-	host: ${hostName}
-	privateIP: ${privateIP}
-	publicIP: ${publicIP}
+	commonName: ${commonName}
+	hosts: ${hosts}
 	" > ${request}
 	echo "${request} created."
 	cat ${request}
 
+	commonNameRegex="s/\{\{commonName\}\}/${commonName}/"
+
+	if [[ "${hosts}" == "" ]]; then
+		hostsRegex="s/\{\{hosts\}\}//g"
+	else
+		escapedHosts="$(echo "${hosts}" | sed "s/[\.\s]/\\\&/g" | sed s/\,\ */\"\,\"/g)"
+		hostsRegex="s/\{\{hosts\}\}/${escapedHosts}/g"
+	fi
+
 	cp ${FILE_CSR_TEMPLATE} ${csr}
-	sed -i s/\{\{hostName\}\}/${hostName}/g ${csr}
-	sed -i s/\{\{privateIP\}\}/${privateIP}/g ${csr}
-	sed -i s/\{\{publicIP\}\}/${publicIP}/g ${csr}
+	sed -i -E ${commonNameRegex} ${csr}
+	sed -i -E ${hostsRegex} ${csr}
 	echo "${csr} created."
 }
 
 generateCertificate() {
-	hostName="$1"
+	commonName="$1"
 
-	if [ "${hostName}" == "" ]; then
+	if [ "${commonName}" == "" ]; then
 		echo "ERROR: Host required to generate a certificate."
 		exit
 	fi
@@ -82,60 +91,19 @@ generateCertificate() {
 	FILE_CA_CERTIFICATE="${DIR_CERTIFICATES}/ca/ca.pem"
 	FILE_CA_KEY="${DIR_CERTIFICATES}/ca/ca-key.pem"
 
-	targetDirectory="${DIR_CERTIFICATES}/${hostName}"
+	targetDirectory="${DIR_CERTIFICATES}/${commonName}"
 	request="${targetDirectory}/request.md"
 	csr="${targetDirectory}/csr.json"
-	certificate="${targetDirectory}/${hostName}.pem"
-	privateKey="${targetDirectory}/${hostName}-key.pem"
+	certificate="${targetDirectory}/${commonName}.pem"
+	privateKey="${targetDirectory}/${commonName}-key.pem"
 
 	echo "Generating certificate..."
 
 	cd ${targetDirectory}
-	cfssl gencert -ca=${FILE_CA_CERTIFICATE} -ca-key=${FILE_CA_KEY} -config=${FILE_CA_CONFIG} ${csr} | cfssljson -bare ${hostName}
-	echo "Generated SSL certificate for host name ${hostName}, using the following CSR: "
+	cfssl gencert -ca=${FILE_CA_CERTIFICATE} -ca-key=${FILE_CA_KEY} -config=${FILE_CA_CONFIG} ${csr} | cfssljson -bare ${commonName}
+	chmod 644 ${FILE_CA_KEY} ${FILE_CA_CERTIFICATE}
+	echo "Generated SSL certificate for commonName name ${commonName}, using the following CSR: "
 	cat ${csr}
-}
-
-deployCertificate() {
-	hostName="$1"
-	publicIP="$2"
-
-	if [ "${hostName}" == "" ]; then
-		echo "ERROR: Host required to deploy a certificate."
-		exit
-	fi
-
-	if [ "${publicIP}" == "" ]; then
-		echo "ERROR: Host required to deploy a certificate."
-		exit
-	fi
-
-	FILE_CA_CERTIFICATE="${DIR_CERTIFICATES}/ca/ca.pem"
-
-	targetDirectory="${DIR_CERTIFICATES}/${hostName}"
-	request="${targetDirectory}/request.md"
-	certificate="${targetDirectory}/${hostName}.pem"
-	privateKey="${targetDirectory}/${hostName}-key.pem"
-
-	if [ "${publicIP}" == "" ]; then
-		publicIP=$(cat ${request} | grep 'publicIP' | awk '{print $2}')
-
-		if [[ "${publicIP}" == "" ]]; then
-			echo "ERROR: The CSR for the requested host name does not contain a public IP. Cannot deploy without a public IP."
-			exit
-		fi
-	fi
-
-	destination="core@${publicIP}:/home/core/certificates"
-
-	echo "Deploying certificate..."
-
-	chmod 0644 ${privateKey}
-	scp ${FILE_CA_CERTIFICATE} ${certificate} ${privateKey} ${destination}
-	echo "Certificate files deployed to ${destination}.
-	${certificate}
-	${privateKey}
-	"
 }
 
 automate() {
@@ -187,11 +155,8 @@ renewAllCertificates() {
 			if [[ ${expiryTime} -le ${RENEWAL_THRESHOLD} ]]; then
 				echo "Certificate requires renewal."
 
-				publicIP=$(cat ${request} | grep 'publicIP' | awk '{print $2}')
-
-				echo "Generating certificate '${certificateName}' and sending to public IP '${publicIP}'."
+				echo "Generating certificate '${certificateName}'."
 				generateCertificate ${certificateName}
-				deployCertificate ${certificateName} ${publicIP}
 			else
 				echo "Certificate does not require renewal at this time."
 			fi
@@ -200,15 +165,4 @@ renewAllCertificates() {
 
 	echo ""
 	echo "All certificates are now up to date."
-}
-
-generateFleetCertificates() {
-	machines=$(fleetctl list-machines -fields=ip -no-legend)
-
-	for ip in machines; do
-		echo "Searching for existing CSR for machine ${ip}."
-
-		# @todo: If CSR not found, generate one using `create CSR $host $privateIP $publicIP`
-
-	done;
 }

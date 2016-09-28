@@ -1,40 +1,119 @@
 #cloud-config
-
 ---
 coreos:
   etcd2:
-    discovery: https://discovery.etcd.io/d5e2e2257d8022de63db9bb17cdc89dd
-    advertise-client-urls: http://$public_ipv4:2379
-    initial-advertise-peer-urls: http://$private_ipv4:2380
-    listen-client-urls: http://0.0.0.0:2379
-    listen-peer-urls: http://$private_ipv4:2380
-  fleet:
-    public-ip: "$public_ipv4"
+    # Generate a discovery token: https://discovery.etcd.io/new?size=3 (change size to desired number of cluster nodes)
+    discovery: https://discovery.etcd.io/place-generated-token-here
+    advertise-client-urls: https://$private_ipv4:2379
+    initial-advertise-peer-urls: https://$private_ipv4:2380
+    listen-client-urls: https://0.0.0.0:2379
+    listen-peer-urls: https://$private_ipv4:2380
+    endpoint: https://$private_ipv4:2379
+    client-cert-auth: true
+    trusted-ca-file: /home/core/certificates/ca/ca.pem
+    cert-file: /home/core/certificates/fleet/fleet.pem
+    key-file: /home/core/certificates/fleet/fleet-key.pem
+    peer-client-cert-auth: true
+    peer-trusted-ca-file: /home/core/certificates/ca/ca.pem
+    peer-cert-file: /home/core/certificates/fleet/fleet.pem
+    peer-key-file: /home/core/certificates/fleet/fleet-key.pem
   flannel:
-    interface: "$public_ipv4"
+    public-ip: $public_ipv4
+    etcd-endpoints: https://$private_ipv4:2379
+  fleet:
+    public-ip: $public_ipv4
+    etcd_servers: https://$private_ipv4:2379
+    etcd_cafile: /home/core/certificates/ca/ca.pem
+    etcd_certfile: /home/core/certificates/fleet/fleet.pem
+    etcd_keyfile: /home/core/certificates/fleet/fleet-key.pem
+  locksmith:
+    endpoint: https://$private_ipv4:2379
+    etcd_cafile: /home/core/certificates/ca/ca.pem
+    etcd_certfile: /home/core/certificates/fleet/fleet.pem
+    etcd_keyfile: /home/core/certificates/fleet/fleet-key.pem
+  update:
+    reboot-strategy: etcd-lock
   units:
   - name: etcd2.service
     command: start
   - name: fleet.service
     command: start
-  - name: flanneld.service
-    drop-ins:
-    - name: 50-network-config.conf
-      content: |
-        [Service]
-        ExecStartPre=/usr/bin/etcdctl set /coreos.com/network/config '{ "Network": "10.1.0.0/16" }'
-    command: start
-  - name: docker-tcp.socket
-    command: start
-    enable: true
-    content: |
-      [Unit]
-      Description=Docker Socket for the API
-
-      [Socket]
-      ListenStream=2375
-      Service=docker.service
-      BindIPv6Only=both
-
-      [Install]
-      WantedBy=sockets.target
+write_files:
+- path: /home/core/certificates/ca/ca.pem
+  permissions: 644
+  owner: root
+  content: |
+    -----BEGIN CERTIFICATE-----
+    MIIDHDCCAgSgAwIBAgIUQDU6sjLcNTZ7DpmfctspJ1rk6nQwDQYJKoZIhvcNAQEL
+    BQAwDTELMAkGA1UEAxMCY2EwHhcNMTYwOTI1MTIzNjAwWhcNMjEwOTI0MTIzNjAw
+    WjANMQswCQYDVQQDEwJjYTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEB
+    AJ6FzA3CDZjYu1w8GdbsZpcJx6cxMSzkYM583xaVxb+god+1nHAWd9R+SFwruflD
+    xbvztGn+QKCSGtMzq2HrgeDk8qS9Er7jV8vUuIntGvJxQRP7z+ohM9oQtQNheL0g
+    FdjGQptRlPEYAZSY5tz/woctzcBWwKiLTYWnuGiZiimIROZNneTbrwcbt62/rPhc
+    rkgT7VhUheZnRPrHMCaNT1b0lovDWbdaoCbqxfrwSXTRouYP//NatTCNW1zBTA5J
+    Vby9Jl7vM9v/JX8Gzw8bBjrAJEPfc+LOFnTHEq56YrrxUWe0h5r/RGI2eFjygukK
+    bTx+b399sz/FlieVhvNwc8cCAwEAAaN0MHIwDgYDVR0PAQH/BAQDAgEGMA8GA1Ud
+    EwEB/wQFMAMBAf8wHQYDVR0OBBYEFLW8Ed8HjprOUwqzpOyjlYd0dan6MB8GA1Ud
+    IwQYMBaAFLW8Ed8HjprOUwqzpOyjlYd0dan6MA8GA1UdEQQIMAaHBH8AAAEwDQYJ
+    KoZIhvcNAQELBQADggEBAHTNihhaXr3P8LDQeFYTJs2deI+sbJttpPyUf/TPqwjV
+    U8MEJZrP758lK55zR1rAA8adYwls3hL/HyzB205zdLnQsbS7uVpWoOktLiBroYf7
+    //YSOoJMJkbWXGtN80GVxvyamnOwj8nkljiU9T0HuGwcfmsW8rbf2Qf6K5flK0Fk
+    PY3RaauSVKnQi4IhdqbReE9pGh0I+fCSHmsAslpeyd08jpVEK1ec6ragX5Ku50on
+    D7PMe02ernfbeSOsHoP36xRqXy4WExALV8+YVRb965VvpmQtjrgpCxTtM1dcrWxY
+    oZMAcnRVqfT7zPWN4Um2HCeKYzyOWYIttwUURwlVpWY=
+    -----END CERTIFICATE-----
+- path: /home/core/certificates/fleet/fleet.pem
+  permissions: 644
+  owner: root
+  content: |
+    -----BEGIN CERTIFICATE-----
+    MIIDVjCCAj6gAwIBAgIUHgy5FRDHIAgQhg6JbhI0hiGBSeMwDQYJKoZIhvcNAQEL
+    BQAwDTELMAkGA1UEAxMCY2EwHhcNMTYwOTI1MTIzNjAwWhcNMjEwOTI0MTIzNjAw
+    WjAQMQ4wDAYDVQQDEwVmbGVldDCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoC
+    ggEBAMs5JMzbi2mXlKHDrncQbLo5oiXY017kDhU+Q0o3Z3bHDTGnJ3J2ZDeC1riF
+    ojCw//SUm0RvWdYexGMWPx9LhVawCiuJqL/4J/7azUT8CD+BW9N2DXQv4aqEVaJX
+    vfFUQds9o9J9kH3WRPGUBUWYKR2l7QhCSp6QxIQ+2YN1pZoBoiku4q9iV3IGKn/2
+    PyRgQV40Y039rl/6C2W1JnToUE5RoFrbbENPHMG3uln4tyysHwoA+GCbzA1geq/B
+    W5uFbtkBsDvges7+9Ei8WLcQXeCP1Cq9GjO6VywNyV/NUY1zPLM15jevGz2rV+N3
+    p+ANP2VDX/YUOcBJCIA9f3N7TKsCAwEAAaOBqjCBpzAOBgNVHQ8BAf8EBAMCBaAw
+    HQYDVR0lBBYwFAYIKwYBBQUHAwEGCCsGAQUFBwMCMAwGA1UdEwEB/wQCMAAwHQYD
+    VR0OBBYEFH3ekCMl29mBRuahLUUHPO6vzBFWMB8GA1UdIwQYMBaAFLW8Ed8HjprO
+    UwqzpOyjlYd0dan6MCgGA1UdEQQhMB+CBWZsZWV0hwTAqGRlhwTAqGRmhwTAqGRn
+    hwR/AAABMA0GCSqGSIb3DQEBCwUAA4IBAQCRk2C+/fwnPTpKMWF74YozqV3ES8qX
+    WWSL5Tw3+IEFRBi+7ku8X2orYT8mZ+SNsUS9Fit4kSCBxDkx5JB+QU2vHw7LSryT
+    G0tMz2txBhhVuHduln9YYyzjq8MdbgD3Fj7yp/DUoo8pVt4vqgXXKy1T2qqz4VTr
+    6rPyIge5ii9xqjTbPXK5cZmOahuX/EByRiMGsSDPthdbUjHMT9dI0h1c9YioJRxj
+    5jkz5UeMOeyuzb82nebJziqtal7s7RQeMe/UfSYMYqPlvrZMlVWtG0bqvxSgURxa
+    q0svGBf52Zb2HstTSZSVmOIilTdWYlWCarvL0HNPqfluUu/mOuywq34J
+    -----END CERTIFICATE-----
+- path: /home/core/certificates/fleet/fleet-key.pem
+  permissions: 644
+  owner: root
+  content: |
+    -----BEGIN RSA PRIVATE KEY-----
+    MIIEpAIBAAKCAQEAyzkkzNuLaZeUocOudxBsujmiJdjTXuQOFT5DSjdndscNMacn
+    cnZkN4LWuIWiMLD/9JSbRG9Z1h7EYxY/H0uFVrAKK4mov/gn/trNRPwIP4Fb03YN
+    dC/hqoRVole98VRB2z2j0n2QfdZE8ZQFRZgpHaXtCEJKnpDEhD7Zg3WlmgGiKS7i
+    r2JXcgYqf/Y/JGBBXjRjTf2uX/oLZbUmdOhQTlGgWttsQ08cwbe6Wfi3LKwfCgD4
+    YJvMDWB6r8Fbm4Vu2QGwO+B6zv70SLxYtxBd4I/UKr0aM7pXLA3JX81RjXM8szXm
+    N68bPatX43en4A0/ZUNf9hQ5wEkIgD1/c3tMqwIDAQABAoIBAAwgqeCLzYMMp7ML
+    oXK7iTGH1PRbPynvhCOiZpOcQNFmyZPH/OOoywxBA51ZZDdxqKSo5acs2ficN24O
+    Ws/8SsXElabJfUePgJuF5TATtk5L4vX4mo7veJEbepzIja5EL/XsdMVP9vp7efvM
+    sI/Zp8J8L2wJwLg7vW6C7aoZsDtDeGYbTm6aVt/fE4UeiHaKyB6yz4TtgDivM/nu
+    w9vgwDYf4es0n9fTJx8C4Psh6yNB1tX/KfHNXCKz0yWOPwJtkNPmNdgKY6JJnFgN
+    2pI43z0XbRIL11v+3QmzuAtzYvc4gEAgFvKIIQafOfaNvV3IszBf0NWP7unAoiS4
+    p3HuvNkCgYEA9OEaQj2X6JOYsxcATGcrpl91KHiGZQbSnY6wTcf9Ib3lmbAUU9v4
+    H1sWw+EZgpeRhih4XE9PmV0f7l8W8vRb8NmXzSnN9UsE0nfVc+OAzMKpDjw+1KEY
+    sPOjLYA3iStOiEAuUOuQ1erLn77zRnpeZWwA2wNCwhqBXnkQ4rwyHb0CgYEA1HPC
+    YNOpvTTVUfTFqzC4U2t5gSayMAEnH73VzAAS6HfvZOsmuVThoUsBk7KcbBP1vThU
+    LtKzjsgUs8KqPathDET9xRM8PROSienksV9pgavl+iKJcDIRk9sGrGw5APaiJ2pN
+    OVsaTpHC0JKA2d4/1tOwA6W5znadlR/Mk6UC9ocCgYEAv+CCStUoarz8MZgcS8Gr
+    mjnB+2w1IoQuE/byfn/uALpjZgFqbCs4SJl/RQzkiEdrZ8veQ7aBkJI/qvAnc0e1
+    owtcvw26rDGUHbZ4Ms5Y5hjBjr32HXX9euntOoH1Ai5E4s4nfJCYdIX997YPuXG4
+    9Y+jO/laHe3W4MfMS11bh6ECgYBIciD6e7MJ/hYwGFO/iKGScLfCPrvMetgojsd1
+    BSFtfFh6BWXzFOrL4ZPsFaAZisTlfWvXe6oXKktE8UC0PtidInmW1nRYL3Bs7wE5
+    KtwDh+aoYVaUl74+uRWRfmYB2hh5cFpdEJ/r4vCXxx2BLbR/QThoRf8SVIhv7aQJ
+    RN+5yQKBgQCvPIpr+s9t2lYQCRGb/qrJQT5CfqraIcWIVexugqE/VzjB/BkbAUvc
+    kySfZg9YUMTIYUbgSehux9LIa6UvT7LWHg1tWRPn1AheOmMFUPg+fs2SmlhGvkI4
+    W3SGmWS46Gm8io7EH8w75JJeOR4or+kpdFXsjR57VuegHjb9meVU9w==
+    -----END RSA PRIVATE KEY-----

@@ -1,1 +1,3 @@
-.vagrant
+vagrant/.vagrant
+vagrant/cloud-config-generated.yml
+certificates

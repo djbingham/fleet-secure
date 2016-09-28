@@ -2,16 +2,11 @@
 ##
 ## Usage: _PROG_
 ##
-## This script will execute tasks against a Fleet Certificate Authority (aka Fleet CA) container.
-## This is an unofficial helper to automate creation of certificates for all members of a CoreOS fleet,
-## enabling TLS encryption to be setup and maintained between fleet members with a minimum of hassle.
+## This is an unofficial utility to create and automate renewal of certificates for CoreOS fleet members,
+## enabling TLS encryption to be setup and maintained between fleet members with minimal effort.
 ##
-## The following arguments have default values, which are defined at the top of _PROG_, but can be overridden.
+## All arguments have default values, which are defined at the top of _PROG_, but can be overridden.
 ## Their usage is described below, in the documentation for each available task.
-##
-##> tag
-##> container
-##> certificateVolume
 ##
 
 . $(dirname ${BASH_SOURCE[0]})/scripts/functions.sh
@@ -22,22 +17,31 @@ task=''
 # Fleet-wide arguments
 tag='djbingham/fleet-certificate-authority'
 container='fleet-certificate-authority'
-certificateVolume='fleet-certificates'
+certificateVolume="$(pwd)/certificates"
 
 # Host-specific arguments
-host=''
-privateIP=''
-publicIP=''
+commonName='fleet'
+hosts="\"${COREOS_PRIVATE_IPV4}\", \"${COREOS_PUBLIC_IPV4}\""
 
 # Command to execute in container
-command='/app/scripts/main.sh'
+command=''
 arguments=''
 
 # Override defaults from above with any options passed via command line
 getOptions $*
 
+# Build volume arguments for Docker commands
+volumeNames="${certificateVolume}"
+volumeArguments="--volume ${certificateVolume}:/app/certificates"
+
+if [[ "${ENVIRONMENT}" == 'development' ]]; then
+	volumeNames="${volumeNames}"
+	volumeArguments="${volumeArguments} --volume $(pwd)/scripts:/app/scripts"
+	volumeArguments="${volumeArguments} --volume $(pwd)/config:/app/config"
+fi
+
 echo ""
-echo "Executing task '${task}'."
+echo "Executing task '${task}' with volumes: ${volumeArguments}."
 
 ## Available tasks
 case ${task} in
@@ -73,61 +77,6 @@ case ${task} in
 		;;
 
 	##
-	##> run
-	##>> Run the container with the default command.
-	##
-	##>> Allowed arguments:
-	##>>> container: Name to assign the container.
-	##>>> certificateVolume: Name of the volume in which generated certificates should be stored.
-	##>>> tag: The tag of the container image to run.
-	run)
-		docker run \
-			-d \
-			--name "${container}" \
-			--volume "${certificateVolume}:/app/certificates" \
-			${tag}
-		;;
-
-	##
-	##> test
-	##>> Run the container with the default command.
-	##
-	##>> Allowed arguments:
-	##>>> container: Name to assign the container.
-	##>>> certificateVolume: Name of the volume in which generated certificates should be stored.
-	##>>> tag: The tag of the container image to run.
-	test)
-		docker run \
-			-d \
-			--name "${container}" \
-			--volume "${certificateVolume}:/app/certificates" \
-			--volume "$(pwd)/scripts:/app/scripts" \
-			--volume "$(pwd)/config:/app/config" \
-			${tag}
-		;;
-
-	##
-	##> add-certificate
-	##>> Generate and deploy a new certificate to a fleet node.
-	##
-	##>> Allowed arguments:
-	##>>> certificateVolume: Name of the volume in which generated certificates should be stored.
-	##>>> tag: The tag of the container image to run.
-	##>>> host: The hostname to assign to the generated certificate.
-	##>>> privateIP: The private IP address of the fleet node this certificate will be deployed to.
-	##>>> publicIP: The public IP address of the fleet node this certificate will be deployed to.
-	add-certificate)
-		if [[ ${host} == "" || ${privateIP} == "" || ${publicIP} == "" ]]; then
-			echo 'Missing required option. Required: host, privateIP, publicIP'
-		else
-			docker run \
-				--rm \
-				--volume "${certificateVolume}:/app/certificates" \
-				${tag} add-certificate ${host} ${privateIP} ${publicIP}
-		fi
-		;;
-
-	##
 	##> logs
 	##>> Tail the logs from the running container.
 	##
@@ -137,30 +86,81 @@ case ${task} in
 		;;
 
 	##
+	##> start
+	##>> Run the container with the default command.
+	##
+	##>> Allowed arguments:
+	##>>> container: Name to assign the container.
+	##>>> certificateVolume: Name of the volume in which generated certificates should be stored.
+	##>>> tag: The tag of the container image to run.
+	start)
+		docker run \
+			-d \
+			--name "${container}" \
+			${volumeArguments} \
+			${tag}
+		;;
+
+	##
+	##> stop
+	##>> Stop (if running) and destroy a container.
+	##
+	##>> Allowed arguments:
+	##>>> container: Name of the container to destroy.
+	##>>> certificateVolume: Name of the volume in which generated certificates should be stored.
+	stop)
+		docker stop ${container} || true
+		docker rm -vf ${container} || true
+		docker volume rm ${volumeNames} || true
+		;;
+
+	##
+	##> generate-ca
+	##>> Generate and deploy a new certificate to a fleet node.
+	##
+	##>> Allowed arguments:
+	##>>> certificateVolume: Name of the volume in which generated certificates should be stored.
+	##>>> tag: The tag of the container image to run.
+	generate-ca)
+		docker run \
+			--rm \
+			${volumeArguments} \
+			${tag} generate-ca
+		;;
+
+	##
+	##> generate-certificate
+	##>> Generate and deploy a new certificate to a fleet node.
+	##
+	##>> Allowed arguments:
+	##>>> certificateVolume: Name of the volume in which generated certificates should be stored.
+	##>>> tag: The tag of the container image to run.
+	##>>> commonName: The common name to assign to the generated certificate.
+	##>>> hosts: The host names and IP address the certificate should be valid for.
+	generate-certificate)
+		if [[ ${commonName} == "" || ${hosts} == "" ]]; then
+			echo 'Missing required option. Required: commonName, hosts'
+		else
+			docker run \
+				--rm \
+				${volumeArguments} \
+				${tag} add-certificate ${commonName} ${hosts}
+		fi
+		;;
+
+	##
 	##> execute
-	##>> Execute a command within the running Fleet CA container. The `help` command outputs documentation.
+	##>> Execute an arbitrary command within the Fleet CA container. Container must be running before this is called.
 	##
 	##>> Allowed arguments:
 	##>>> certificateVolume: Name of the volume in which generated certificates should be stored.
 	##>>> tag: The tag of the container image to run.
 	##>>> command (or cmd): The command to execute inside the container
 	execute)
+	echo "EXECUTING ${command} $arguments}"
 		docker exec \
 			-it \
 			${container} ${command} ${arguments}
-		;;
-
-	##
-	##> destroy
-	##>> Stop (if running) and destroy a container.
-	##
-	##>> Allowed arguments:
-	##>>> container: Name of the container to destroy.
-	##>>> certificateVolume: Name of the volume in which generated certificates should be stored.
-	destroy)
-		docker stop ${container} || true
-		docker rm -vf ${container} || true
-		docker volume rm ${certificateVolume} || true
 		;;
 
 	##
