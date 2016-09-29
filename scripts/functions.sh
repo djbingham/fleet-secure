@@ -23,9 +23,9 @@ generateCA() {
 	FILE_CA_KEY="${DIR_CERTIFICATES}/ca/ca-key.pem"
 	FILE_CA_CERTIFICATE="${DIR_CERTIFICATES}/ca/ca.pem"
 
-	echo ""
+	echo " "
 	echo "Generating Certificate Authority..."
-	echo ""
+	echo " "
 
 	mkdir -p ${DIR_CA}
 	cd ${DIR_CA}
@@ -36,9 +36,9 @@ generateCA() {
 
 	cfssl gencert -config ${FILE_CA_CONFIG} -initca ${FILE_CA_CSR} | cfssljson -bare ca -
 	chmod 644 ${FILE_CA_KEY} ${FILE_CA_CERTIFICATE}
-	echo ""
+	echo " "
 	echo "Certificate Authority generated."
-	echo ""
+	echo " "
 }
 
 generateCSR() {
@@ -112,15 +112,15 @@ automate() {
 	FUNCTION=$1
 	shift
 
-	echo ""
-	echo ">>>> Automated execution of ${FUNCTION} with arguments $@."
-	echo ""
+	echo " "
+	echo ">>>> Automated execution of ${FUNCTION} (arguments: $@)."
+	echo " "
 
 	${FUNCTION} $@
 
-	echo ""
+	echo " "
 	echo "<<<< Waiting ${FREQUENCY} seconds for next iteration of ${FUNCTION}."
-	echo ""
+	echo " "
 	sleep ${FREQUENCY}
 	automate ${FREQUENCY} ${FUNCTION} $@
 }
@@ -136,7 +136,7 @@ renewAllCertificates() {
 
 	for folder in ${DIR_CERTIFICATES}/*; do
 		if [ -d ${folder} ] && [ "${folder}" != "${DIR_CERTIFICATES}/ca" ]; then
-			echo ""
+			echo " "
 			echo "Inspecting certificate in folder '${folder}'"
 
 			certificateName=${folder##*/}
@@ -163,6 +163,6 @@ renewAllCertificates() {
 		fi
 	done
 
-	echo ""
+	echo " "
 	echo "All certificates are now up to date."
 }
