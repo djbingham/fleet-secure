@@ -10,13 +10,16 @@ fi
 
 echo "Running command '${command}'"
 case ${command} in
+	##
+	##> generate-ca
+	##>> Generate a CA key and certificate.
 	generate-ca)
 		generateCA
 		;;
 
 	##
 	##> auto
-	##>> Continually monitor and automatically renew all certificates generated using `add-certificate`.
+	##>> Continually monitor and automatically renew all generated certificates.
 	##>> This includes certificates added after the `auto` command was started.
 	auto)
 		# @todo: Massively reduce the frequency of renewal checks (to something like once per week or month)
@@ -24,15 +27,14 @@ case ${command} in
 		;;
 
 	##
-	##> add-certificate
+	##> generate-certificate
 	##>> Generate and deploy the initial certificate for a new host.
 	##>> This will be automatically renewed before expiry if there is a running `auto` command.
 	##
 	##>> Expected arguments:
-	##>>> hostName
-	##>>> publicIP
-	##>>> privateIP
-	add-certificate)
+	##>>> commonName
+	##>>> ...hosts
+	generate-certificate)
 		generateCSR $@
 		generateCertificate $@
 		;;

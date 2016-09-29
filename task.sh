@@ -144,7 +144,7 @@ case ${task} in
 			docker run \
 				--rm \
 				${volumeArguments} \
-				${tag} add-certificate ${commonName} ${hosts}
+				${tag} generate-certificate ${commonName} ${hosts}
 		fi
 		;;
 
