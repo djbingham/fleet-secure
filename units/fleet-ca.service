@@ -1,0 +1,24 @@
+[Unit]
+Description=Fleet CA
+Requires=docker.service
+After=docker.service
+Requires=setup-network-environment.service
+After=setup-network-environment.service
+
+[Service]
+TimeoutStartSec=0
+
+# Start procedure
+ExecStartPre=-/usr/bin/docker kill fleet-ca
+ExecStartPre=-/usr/bin/docker rm fleet-ca
+#ExecStartPre=-/usr/bin/docker pull djbingham/fleet-ca
+ExecStartPre=/usr/bin/docker build --tag djbingham/fleet-ca /home/core/share
+ExecStartPre=/usr/bin/docker run --rm -v /home/core/certificates:/app/certificates djbingham/fleet-ca generate-ca
+ExecStartPre=/usr/bin/docker run --rm -v /home/core/certificates:/app/certificates djbingham/fleet-ca generate-certificate fleet $COREOS_PUBLIC_IPV4
+ExecStart=/usr/bin/docker run --name "fleet-ca" -v /home/core/certificates:/app/certificates djbingham/fleet-ca auto
+
+# Stop procedure
+ExecStop=/usr/bin/docker stop fleet-ca
+
+[X-Fleet]
+Global=true
