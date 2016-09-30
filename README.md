@@ -1,83 +1,49 @@
-# Fleet CA
-This is a work in progress aiming to provide a containerised certificate authority that automatically generates and renews certificates for a CoreOS fleet. Commands should be executed via `task.sh`. The reason for using a plain bash script as opposed to, for example, a Makefile is that CoreOS does not come with Make installed and does not allow such tools to be easily installed outside of a container.
+# Fleet Secure
+**Work in Progress**
+
+This project aims to provide a containerised certificate authority that automatically generates and renews certificates for a CoreOS fleet. It extends Cloudflare's cfssl container, using cfssl commands to generate and inspect certificates. 
+
+## Usage
+
+### Systemd Units
+```
+fleetctl submit units/*
+fleetctl start fleet-ca
+```
+
+The recommended usage of this project is via Fleet. The `units` folder contains service files defining systemd units that will initialise a certificate authority per machine in the Fleet cluster, then generate a certificate per machine, configured to allow communication on each machine's private IP address only. The certificates will then be checked at regular intervals for upcoming expiry and renewed automatically prior to expiry.
+
+The commands above need only be run once, on any machine in your cluster, to initialise the CA and certificates throughout. The status and logs of started units can be checked via:
+```
+fleetctl list-units
+journalctl -efu fleet-ca
+```
+*In the `journalctl` command above, the arguments are as follows:*
+```
+-e:          Jump to end of log
+-f:          Follow the log
+-u fleet-ca: Show logs from the fleet-ca unit only
+```
+
+### task.sh
+```
+./task.sh [task] [options]
+```
+
+A utility script, `task.sh` is provided for direct execution of tasks against Docker containers without the use of Fleet. A plain bash script is used (as opposed to a Makefile, for instance) because CoreOS does not come with Make installed and does not allow for such tools to be easily installed outside of a container.
 
 To see what commands are available, clone this repository and run `./task.sh help`.
 
-## Testing in development
-To test any changes to this project, simply set the environment variable `ENVIRONMENT=development`, before running any tasks as normal. For extra convenience, an additional script is included that will take care of this for you:
+### test.sh
 ```
 ./test.sh [task] [options]
 ```
-Executing the above is completely equivalent to:
+
+For testing changes to this project, there is also a `test.sh` script, which will ensure that project files are mounted from the host machine, rather than using the files built into the Docker container image. This enables changes to the project to be tested without re-building the container.
+
+Executing the test script as above is equivalent to the following:
 ```
 ENVIRONMENT=development ./task.sh [task] [options]
-```
-
-## Common Tasks
-
-### Container Management
-
-###### Build, push and pull the container image
-```
-. task.sh build [tag=...]
-. task.sh push [tag=...]
-. task.sh pull [tag=...]
-```
-
-###### Start perpetual container for auto-renewal of certificates
-```
-. task.sh run [tag=...] [container=...] [certificateVolume=...]
-```
-
-When working on this project it is useful to run the container with host-mounted scripts and configuration files, so that changes are reflected immediately without needing to rebuild the container:
-
-```
-. task.sh test [tag=...] [container=...] [certificateVolume=...]
-```
-
-###### Stop and destroy the auto-renewal container, including volumes
-```
-. task.sh stop [contianer=...]
-. task.sh destroy [container=...]
-```
-
-### Using the running container
-
-###### Generate a new certificate authority
-```
-. task.sh generate-ca [tag=...] [container=...]
-```
-
-e.g.
-```
-. task.sh generate-ca
-```
-
-###### Generate a new certificate
-```
-. task.sh generate-certificate commonName=... hosts=... [tag=...] [container=...]
-```
-
-The `hosts` value should be a comma-separated list of host names and IP addresses for which the certificate will be valid. e.g.
-```
-. task.sh generate-certificate commonName=fleet hosts="192.168.100.101, 192.168.100.102, 192.168.100.103"
-```
-
-###### Tail the logs
-```
-. task.sh logs
-```
-
-###### Execute a command within the running container
-```
-. task.sh exec [tag=...] [command=...]
-```
-
-### Working with the certificate volume
-
-###### Execute a command within a separate container that shares volumes and image with the running container
-```
-. task.sh execute [tag=...] [entrypoint=...] [command=...]
 ```
 
 ## Testing security certificates
