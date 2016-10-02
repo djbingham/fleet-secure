@@ -3,7 +3,13 @@
 
 This project aims to provide a containerised certificate authority that automatically generates and renews certificates for a CoreOS fleet. It extends Cloudflare's cfssl container, using cfssl commands to generate and inspect certificates.
 
-Currently a CA certificate and initial client-server certificate for Fleet must be generated in advance and pasted into the cloud config in order for Fleet to be able to start the systemd units. The can probably be overcome by starting the server in non-TLS mode so that Fleet can startup the required units to generate a CA and certificates before enabling TLS. This whole process can hopefully be automated through a one-shot systemd unit defined in the cloud config.
+Currently a CA certificate and initial client-server certificate for Fleet must be generated in advance and pasted into the cloud config in order for Fleet to be able to start the systemd units.
+ 
+ ## Planned Changes
+ 
+1. Remove certificates from cloud config. Start the server without TLS enabled, but with a one-shot service defined in cloud config to start the fleet-ca unit, initialise a CA and certificates, then enable TLS throughout the fleet.
+
+2. Change the automated renewal process to use a cron-style system so that the renewal process can run at specified times, rather than at a specified interval.
 
 ## Usage
 
