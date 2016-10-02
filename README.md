@@ -5,7 +5,7 @@ This project aims to provide a containerised certificate authority that automati
 
 Currently a CA certificate and initial client-server certificate for Fleet must be generated in advance and pasted into the cloud config in order for Fleet to be able to start the systemd units.
  
- ## Planned Changes
+## Planned Changes
  
 1. Remove certificates from cloud config. Start the server without TLS enabled, but with a one-shot service defined in cloud config to start the fleet-ca unit, initialise a CA and certificates, then enable TLS throughout the fleet.
 
