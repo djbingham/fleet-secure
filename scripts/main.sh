@@ -22,8 +22,8 @@ case ${command} in
 	##>> Continually monitor and automatically renew all generated certificates.
 	##>> This includes certificates added after the `auto` command was started.
 	auto)
-		# @todo: Massively reduce the frequency of renewal checks (to something like once per week or month)
-		automate 10 renewAllCertificates
+		# Check certificates for upcoming renewal once per week
+		automate 604800 renewAllCertificates
 		;;
 
 	##
