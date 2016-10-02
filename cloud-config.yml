@@ -1,0 +1,59 @@
+#cloud-config
+---
+coreos:
+  etcd2:
+    # Generate a discovery token: https://discovery.etcd.io/new?size=3 (change size to desired number of cluster nodes)
+    discovery: https://discovery.etcd.io/place-generated-token-here
+    advertise-client-urls: https://$private_ipv4:2379
+    initial-advertise-peer-urls: https://$private_ipv4:2380
+    listen-client-urls: https://0.0.0.0:2379
+    listen-peer-urls: https://$private_ipv4:2380
+    endpoint: https://$private_ipv4:2379
+    client-cert-auth: true
+    trusted-ca-file: /home/core/certificates/ca/ca.pem
+    cert-file: /home/core/certificates/fleet/fleet.pem
+    key-file: /home/core/certificates/fleet/fleet-key.pem
+    peer-client-cert-auth: true
+    peer-trusted-ca-file: /home/core/certificates/ca/ca.pem
+    peer-cert-file: /home/core/certificates/fleet/fleet.pem
+    peer-key-file: /home/core/certificates/fleet/fleet-key.pem
+  flannel:
+    public-ip: $public_ipv4
+    etcd-endpoints: https://$private_ipv4:2379
+  fleet:
+    public-ip: $public_ipv4
+    etcd_servers: https://$private_ipv4:2379
+    etcd_cafile: /home/core/certificates/ca/ca.pem
+    etcd_certfile: /home/core/certificates/fleet/fleet.pem
+    etcd_keyfile: /home/core/certificates/fleet/fleet-key.pem
+  locksmith:
+    endpoint: https://$private_ipv4:2379
+    etcd_cafile: /home/core/certificates/ca/ca.pem
+    etcd_certfile: /home/core/certificates/fleet/fleet.pem
+    etcd_keyfile: /home/core/certificates/fleet/fleet-key.pem
+  update:
+    reboot-strategy: etcd-lock
+    strategy: off
+  units:
+  - name: etcd2.service
+    command: start
+  - name: fleet.service
+    command: start
+write_files:
+- path: /home/core/certificates/ca/ca.pem
+  permissions: 644
+  owner: root
+  content: |
+    INSERT CA CERTIFICATE HERE
+
+- path: /home/core/certificates/fleet/fleet.pem
+  permissions: 644
+  owner: root
+  content: |
+    INSERT INITIAL FLEET CERTIFICATE HERE
+
+- path: /home/core/certificates/fleet/fleet-key.pem
+  permissions: 644
+  owner: root
+  content: |
+    INSERT INITIAL FLEET KEY HERE

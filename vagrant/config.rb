@@ -9,13 +9,13 @@ $num_instances=3
 $new_discovery_url="https://discovery.etcd.io/new?size=#{$num_instances}"
 
 # Automatically replace the discovery token on 'vagrant up'
-if File.exist?('cloud-config.yml') && ARGV[0].eql?('up')
+if File.exist?('../cloud-config.yml') && ARGV[0].eql?('up')
   require 'open-uri'
   require 'yaml'
 
   token = open($new_discovery_url).read
 
-  data = YAML.load(IO.readlines('cloud-config.yml')[1..-1].join)
+  data = YAML.load(IO.readlines('../cloud-config.yml')[1..-1].join)
 
   if data.key? 'coreos' and data['coreos'].key? 'etcd'
     data['coreos']['etcd']['discovery'] = token
